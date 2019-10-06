@@ -1,2 +1,3 @@
-WIDER_train
-WIDER_val
+./WIDER_train_annotations/*.xml
+./WIDER_val_annotations/*.xml
+.vscode/

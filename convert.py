@@ -22,10 +22,10 @@ def createAnnotationPascalVocTree(folder, basename, path, width, height):
 
     return ET.ElementTree(annotation)
 
-def createObjectPascalVocTree(xmin, ymin, xmax, ymax):
+def createObjectPascalVocTree(xmin, ymin, xmax, ymax, pose):
     obj = ET.Element('object')
     ET.SubElement(obj, 'name').text = 'face'
-    ET.SubElement(obj, 'pose').text = 'Unspecified'
+    ET.SubElement(obj, 'pose').text = pose
     ET.SubElement(obj, 'truncated').text = '0'
     ET.SubElement(obj, 'difficult').text = '0'
 
@@ -45,7 +45,7 @@ def parseImFilename(imFilename, imPath):
 
     return folder, basename, imFilename, str(width), str(height)
 
-def convertWFAnnotations(annotationsPath, targetPath, imPath):
+def convertWFAnnotations(annotationsPath, targetPath, imPath, minSize):
     ann = None
     basename = ''
     with open(annotationsPath) as f:
@@ -57,11 +57,16 @@ def convertWFAnnotations(annotationsPath, targetPath, imPath):
                 nbBndboxes = f.readline()
                 
                 i = 0
+                if int(nbBndboxes) == 0:
+                    _ = f.readline()
+                    continue
                 while i < int(nbBndboxes):
                     i = i + 1
-                    x1, y1, w, h, _, _, _, _, _, _ = [int(i) for i in f.readline().split()]
-
-                    ann.getroot().append(createObjectPascalVocTree(str(x1), str(y1), str(x1 + w), str(y1 + h)).getroot())
+                    x1, y1, w, h, _, _, _, _, _, pose = [int(i) for i in f.readline().split()]
+                    if (w <= int(minSize)) or (h <= int(minSize)):
+                        continue
+                    else:
+                        ann.getroot().append(createObjectPascalVocTree(str(x1), str(y1), str(x1 + w), str(y1 + h), str(pose)).getroot())
                 
                 if not os.path.exists(targetPath):
                      os.makedirs(targetPath)
@@ -80,8 +85,9 @@ if __name__ == '__main__':
     PARSER.add_argument('-ap', '--annotations-path', help='the annotations file path. ie:"./wider_face_split/wider_face_train_bbx_gt.txt".')
     PARSER.add_argument('-tp', '--target-path', help='the target directory path where XML files will be copied.')
     PARSER.add_argument('-ip', '--images-path', help='the images directory path. ie:"./WIDER_train/images"')
+    PARSER.add_argument('-mins', '--min-size', help='filter out too small face. ie: 30')
 
     ARGS = vars(PARSER.parse_args())
     
-    convertWFAnnotations(ARGS['annotations_path'], ARGS['target_path'], ARGS['images_path'])
+    convertWFAnnotations(ARGS['annotations_path'], ARGS['target_path'], ARGS['images_path'], ARGS['min_size'])
 
